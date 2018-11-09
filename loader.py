@@ -1,5 +1,7 @@
 import csv
 import time
+from datetime import datetime
+import os
 
 
 class LabeledDay(object):
@@ -22,7 +24,6 @@ class Day(object):
 
 
 def load_csv(filename):
-    labeled_days = []
     days = []
     with open(filename) as csvfile:
         readCSV = csv.reader(csvfile, delimiter=',')
@@ -31,26 +32,69 @@ def load_csv(filename):
             if count != 0:
                 row1 = row[0]
                 pattern = '%Y-%m-%d'
-                epoch = int(time.mktime(time.strptime(row1, pattern)))
-                day = Day(epoch, float(row[1]), float(row[2]), float(row[3]), float(row[4]), float(row[5]))
-                days.append(day)
-            count += 1
-
+                try:
+                    epoch = int((datetime.strptime(row1, pattern)).timestamp())
+                    day = Day(epoch, float(row[1]), float(row[2]), float(row[3]), float(row[4]), float(row[5]))
+                    days.append(day)
+                except OverflowError:
+                    print("Windows Blows Dick: " + row1)
+    count += 1
     # take a day -> take 10 days after, average them and compare them
     # edge case end of the array average whats left
-    size = len(days)
-    for i, day in enumerate(days):
+    return days
+
+
+# data = Day object
+# k = number of days to average the forecast
+def label_data(data, k):
+    labeled_days = []
+    size = len(data)
+    for i, day in enumerate(data):
         label = 0
         day_value = day.close
         average_fwd_val = 0
         temp_count = 0
-        for j in range(10):
+        for j in range(k):
             if j+i < size:
-                average_fwd_val += days[i+j].close
+                average_fwd_val += data[i+j].close
                 temp_count += 1
 
         average_fwd_val = average_fwd_val / temp_count
         if average_fwd_val > day_value:
+            label = 1
+        labeled_day = LabeledDay(day, label)
+        labeled_days.append(labeled_day)
+    return labeled_days
+
+
+def label_data_faster(data, k):
+    labeled_days = []
+    size = len(data)
+    forecast_values = []
+    forecast_val = 0
+    for j in range(k):
+        if j+1 < size:
+            forecast_val += data[j+1].close
+
+    forecast_values.append(forecast_val)
+    # i is 1 less than the actual day value
+    for i, day in enumerate(data[1:]):
+        forecast_val = forecast_values[i]
+        if i+k+1 < size:
+            forecast_val += data[i + k + 1].close
+        elif i+1 < size:
+            forecast_val -= data[i + 1].close
+        forecast_values.append(forecast_val)
+    worry = size - k - 1
+
+    for i, day in enumerate(data):
+        label = 0
+        if i < worry:
+            forecast_values[i] = forecast_values[i] / k
+        else:
+            divider = size - i+1
+            forecast_values[i] = forecast_values[i] / divider
+        if forecast_values[i] > day.close:
             label = 1
         labeled_day = LabeledDay(day, label)
         labeled_days.append(labeled_day)
@@ -67,6 +111,21 @@ def create_csv(labeled_days, filename):
     print("Created CSV File: " + csv_name)
 
 
-filenam = "aa.us.txt"
-labeled_days = load_csv(filenam)
-create_csv(labeled_days, filenam)
+def label_folder(input_folder, output_folder, k):
+    import os
+
+    path = './' + input_folder
+    output_path = './' + output_folder
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    files = os.listdir(path)
+    for stock in files:
+        labeled_days = load_csv(path + '/' + stock)
+        labeled_days = label_data_faster(labeled_days, k)
+        print("Created CSV: " + output_path + '/' + stock)
+        create_csv(labeled_days, output_path + '/' + stock)
+
+
+label_folder("Stocks", "Stocks_labeled", 10)
+#load_csv("./Stocks/ge.us.txt")

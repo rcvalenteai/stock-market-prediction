@@ -1,6 +1,7 @@
 # Hide the Dataset 
 /ETFs
 /Stocks
+/Stocks_labeled
 /venv
 
 # dependencies
