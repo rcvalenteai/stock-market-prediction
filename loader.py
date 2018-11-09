@@ -126,4 +126,5 @@ def label_folder(input_folder, output_folder, k):
 
 
 label_folder("Stocks", "Stocks_labeled", 10)
+# Hi
 #load_csv("./Stocks/ge.us.txt")
