@@ -10,12 +10,15 @@ class LabeledDay(object):
         self.label = label
 
     def to_tuple(self):
-        return (self.day.date, self.day.open_val, self.day.high, self.day.low, self.day.close, self.day.volume, self.label)
+        return (self.day.day, self.day.month, self.day.year, self.day.weekday, self.day.open_val, self.day.high, self.day.low, self.day.close, self.day.volume, self.label)
 
 
 class Day(object):
-    def __init__(self, date, open_val, high, low, close, volume):
-        self.date = date
+    def __init__(self, day, month, year, weekday, open_val, high, low, close, volume):
+        self.day = day
+        self.month = month
+        self.year = year
+        self.weekday = weekday
         self.open_val = open_val
         self.high = high
         self.low = low
@@ -32,9 +35,11 @@ def load_csv(filename):
             if count != 0:
                 row1 = row[0]
                 pattern = '%Y-%m-%d'
+                date = datetime.strptime(row1, pattern)
+
                 try:
-                    epoch = int((datetime.strptime(row1, pattern)).timestamp())
-                    day = Day(epoch, float(row[1]), float(row[2]), float(row[3]), float(row[4]), float(row[5]))
+                    # epoch = int((datetime.strptime(row1, pattern)).timestamp())
+                    day = Day(date.day, date.month, date.year, date.weekday(), float(row[1]), float(row[2]), float(row[3]), float(row[4]), float(row[5]))
                     days.append(day)
                 except OverflowError:
                     print("Windows Blows Dick: " + row1)
