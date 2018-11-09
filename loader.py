@@ -38,9 +38,7 @@ def load_csv(filename):
                     days.append(day)
                 except OverflowError:
                     print("Windows Blows Dick: " + row1)
-    count += 1
-    # take a day -> take 10 days after, average them and compare them
-    # edge case end of the array average whats left
+            count += 1
     return days
 
 
@@ -82,7 +80,7 @@ def label_data_faster(data, k):
         forecast_val = forecast_values[i]
         if i+k+1 < size:
             forecast_val += data[i + k + 1].close
-        elif i+1 < size:
+        if i+1 < size:
             forecast_val -= data[i + 1].close
         forecast_values.append(forecast_val)
     worry = size - k - 1
