@@ -2,6 +2,8 @@ import csv
 import time
 from datetime import datetime
 import os
+import multiprocessing
+import threading
 
 
 class LabeledDay(object):
@@ -115,7 +117,6 @@ def create_csv(labeled_days, filename):
 
 
 def label_folder(input_folder, output_folder, k):
-    import os
 
     path = './' + input_folder
     output_path = './' + output_folder
@@ -130,6 +131,62 @@ def label_folder(input_folder, output_folder, k):
         create_csv(labeled_days, output_path + '/' + stock)
 
 
-label_folder("Stocks", "Stocks_labeled", 10)
-# Hi
-#load_csv("./Stocks/ge.us.txt")
+class LabelFiles (threading.Thread):
+
+    def __init__(self, threadID, name, filenames, path, output_path, k):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.filenames = filenames
+        self.path = path
+        self.output_path = output_path
+        self.k = k
+
+    def run(self):
+        print("Starting " + self.name)
+        for stock in self.filenames:
+            labeled_days = load_csv(self.path + '/' + stock)
+            labeled_days = label_data_faster(labeled_days, self.k)
+            print("Created CSV: " + self.output_path + '/' + stock)
+            create_csv(labeled_days, self.output_path + '/' + stock)
+        print("Exiting " + self.name)
+
+
+def label_folder_threaded(input_folder, output_folder, k):
+    path = './' + input_folder
+    output_path = './' + output_folder
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    files = os.listdir(path)
+    size = len(files)
+    cpu_cores = int(multiprocessing.cpu_count() / 2)
+    if size < cpu_cores:
+        cpu_cores = size
+
+    thread_list =  [None] * cpu_cores
+    thread_list_size = int(size / cpu_cores)
+
+    for i, thread in enumerate(thread_list):
+        if i < cpu_cores:
+            thread_filenames = files[i*thread_list_size:(i+1)*thread_list_size]
+        else:
+            thread_filenames = files[i*thread_list_size:]
+        thread_list[i] = LabelFiles(i+1, "Thread-" + str(i+1), thread_filenames, path, output_path, k)
+        print("Thread-" + str(i+1) + str(type(thread)))
+        thread_list[i].start()
+
+    for i, thread in enumerate(thread_list):
+        print(type(thread))
+        print("Joining Thread " + str(i+1))
+        thread.join()
+
+
+def label_stocks_efts(k):
+    label_folder("ETFs", "ETFs_labeled", k)
+    label_folder("Stocks", "Stocks_labeled", k)
+
+
+label_stocks_efts(10)
+
+
